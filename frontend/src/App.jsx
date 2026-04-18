@@ -5,7 +5,7 @@ import heroImg from './assets/hero.png'
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Mapa2 from "./mapa2"
-import principal from './principal'
+import Principal from './principal'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -15,8 +15,8 @@ function App() {
         <BrowserRouter>
         <Routes>
           <Route path='/Mapa2' element={<Mapa2/>}/>
-          <Route path='/' element={<principal/>}/>
-          <Route path='*' element={<h1>Pagina nao encontrada</h1>}/>
+          <Route path='/' element={<Principal/>}/>
+          <Route path='*' element={<h1>404 Página não encontrada</h1>}/>
         </Routes>
         </BrowserRouter>
     </div>
