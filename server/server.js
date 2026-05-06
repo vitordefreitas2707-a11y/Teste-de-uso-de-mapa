@@ -1,5 +1,14 @@
 import dotenv from "dotenv";
-dotenv.config({ path: "./server/.env" }); //confirmando que o path do env ta corrento porque ele so nao carregava antes
-const { default: app } = await import("./src/app.js"); //precissei por esse await porque ele so carregava as coisas fora de ordem entao o banco de dados simplesmente nao funcionava
+import path from "path";
+import { fileURLToPath } from "url";
 
-app.listen(3001);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, ".env") }); 
+
+const { default: app } = await import("./src/app.js"); 
+
+app.listen(3001, () => {
+  console.log("Servidor rodando na porta 3001");
+});

@@ -6,20 +6,20 @@ node_modules/
 .pnpm-store/
 
 # instalacoes locais dentro de subpastas
-backend/node_modules/
-frontend/node_modules/
+server/node_modules/
+client/node_modules/
 
 # variáveis de ambiente
 .env
 .env.*
-backend/.env
-backend/.env.*
-frontend/.env
-frontend/.env.*
+server/.env
+server/.env.*
+client/.env
+client/.env.*
 
 # build do frontend
 dist/
-frontend/dist/
+client/dist/
 
 # cache do Vite
 .vite/

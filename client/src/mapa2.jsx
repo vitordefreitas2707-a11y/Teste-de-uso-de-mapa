@@ -17,7 +17,7 @@ function Mapa2() {
   }, []);
 
     const reverseGeocode = async () => {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${long}&key=${process.env.GOOGLE_API_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${long}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`;
       
       try {
         const response = await fetch(url);

@@ -13,7 +13,7 @@ export const listarMarcadores = async (req, res) => {
     const dados = await getMarcadores();
     res.json(dados);
   } catch (err) {
-    res.status(500).send(getErrorMessage(err));
+    res.status(500).json({ error: getErrorMessage(err) });
   }
 };
 
@@ -23,7 +23,7 @@ export const criarMarcador = async (req, res) => {
     const novo = await createMarcador(nome, descricao, latitude, longitude);
     res.json(novo);
   } catch (err) {
-    res.status(500).send(getErrorMessage(err));
+    res.status(500).json({ error: getErrorMessage(err) });
   }
 };
 
@@ -32,18 +32,18 @@ export const deletarMarcador = async (req, res) => {
     // Garante que o id recebido realmente pode ser usado na consulta.
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
-      return res.status(400).send("ID invalido");
+      return res.status(400).json({ error: "ID invalido" });
     }
 
     // O model devolve quantas linhas foram apagadas de verdade.
     const deletedRows = await deleteMarcador(id);
     if (deletedRows === 0) {
-      return res.status(404).send("Marcador nao encontrado");
+      return res.status(404).json({ error: "Marcador nao encontrado" });
     }
 
     // 204 significa que o banco apagou o registro com sucesso.
     res.status(204).end();
   } catch (err) {
-    res.status(500).send(getErrorMessage(err));
+    res.status(500).json({ error: getErrorMessage(err) });
   }
 };
