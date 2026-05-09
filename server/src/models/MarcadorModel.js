@@ -5,10 +5,10 @@ export const getMarcadores = async () => {
   return result.rows;
 };
 
-export const createMarcador = async (nome, descricao, latitude, longitude) => {
+export const createMarcador = async (endereco, descricao, latitude, longitude) => {
   const result = await pool.query(
-    'INSERT INTO "marcadores" (nome, descricao, latitude, longitude) VALUES ($1,$2,$3,$4) RETURNING *',
-    [nome, descricao, latitude, longitude]
+    'INSERT INTO "marcadores" (endereco, descricao, latitude, longitude) VALUES ($1,$2,$3,$4) RETURNING *',
+    [endereco, descricao, latitude, longitude]
   );
   return result.rows[0];
 };

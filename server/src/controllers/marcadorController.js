@@ -19,8 +19,8 @@ export const listarMarcadores = async (req, res) => {
 
 export const criarMarcador = async (req, res) => {
   try {
-    const { nome, descricao, latitude, longitude } = req.body;
-    const novo = await createMarcador(nome, descricao, latitude, longitude);
+    const { endereco, descricao, latitude, longitude } = req.body;
+    const novo = await createMarcador(endereco, descricao, latitude, longitude);
     res.json(novo);
   } catch (err) {
     res.status(500).json({ error: getErrorMessage(err) });

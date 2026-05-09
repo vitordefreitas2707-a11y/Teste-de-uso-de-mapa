@@ -3,9 +3,8 @@ import { BrowserRouter, Route, Routes, Link } from 'react-router-dom'
 
 const principal = () => {
   return (
-    <div>principal
-        <Link to="/mapa2">mapa</Link>
-
+    <div>
+        <Link to="/mapa">Mapa</Link>
     </div>
     
   )

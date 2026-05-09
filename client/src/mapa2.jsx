@@ -5,74 +5,112 @@ function Mapa2() {
   const [lat, setLat] = useState("");
   const [long, setLong] = useState("");
   const [desc, setDesc] = useState("");
-  const [nome, setNome] = useState("");
   const [address, setAddress] = useState("");
   const [markers, setMarkers] = useState([]);
 
   useEffect(() => {
     // Carrega do banco os marcadores ja salvos quando a tela abre.
-    fetch("http://localhost:3001/marcadores")
+    fetch("http://localhost:3001/bd/marcadores")
       .then((res) => res.json())
       .then((data) => setMarkers(data));
   }, []);
 
-    const reverseGeocode = async () => {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${long}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`;
-      
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-    
-        if (data.status === "OK") {
-          setAddress(data.results[0].formatted_address);
-          console.log("Endereço:", address);
-          return address;
-        } else {
-          console.error("Erro:", data.status);
-        }
-      } catch (error) {
-        console.error("Falha na requisição:", error);
-      }
+  const reverseGeocode = async () => {
+    //verifica se latitude são valores validos localmente antes de fazer as verificações no servidor
+    if (!lat || !long || isNaN(lat) || isNaN(long)) {
+      alert("Latitude e longitude inválidas");
+      return false;
     }
 
-  const adicionarMarcador = async () => {
-    if (!lat || !long) return;
+    try {
+      //tenta chamar a api
+      const response = await fetch(
+        `http://localhost:3001/api/google/maps/reverse-geocode?lat=${lat}&lng=${long}`
+      );
+      
+      //caso a resposta do try seja um erro ele mostra o codigo de erro devolvido em um alert com uma mensagem daora
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Erro do geocoding:", error);
+        alert(error.error || "Erro ao obter endereço");
+        return false;
+      }
 
-    const response = await fetch("http://localhost:3001/marcadores", {
+      //coloca dentro de data a resposta da api
+      const data = await response.json();
+      //caso a api falar que deu o endereço certo e o adress exista ela coloca o adress localmente e retorna true para o marcador ser colocado
+      if (data.success && data.address) {
+        setAddress(data.address);
+        return true;
+      } else {
+        //caso a api falar que deu errado ou nao me devolver um endereço da erro e impede na constante adicionar o marcador de ser adicionado
+        alert("Não foi possível obter o endereço");
+        return false;
+      }
+    } catch (err) {
+      console.error("Falha na requisição:", err);
+      alert("Erro ao chamar API de geocoding");
+      return false;
+    }
+  };
+
+  //metodo que usei para chamar os dois metodos de uma vez sem 
+  const adicionar = async () => {
+    //esse addressOK é uma variavel do reverseGeocode que confirma se o endereço foi entreque eu confirmei como true la atras
+    const addressOk = await reverseGeocode();
+    if (addressOk) {
+      adicionarMarcador();
+    }
+  };
+
+  //constante para adicionar o marcador no banco e no mapa do leaflet
+  const adicionarMarcador = async () => {
+    //verifica se lat e longitude são valores validos
+    if (!lat || !long || isNaN(lat) || isNaN(long)) {
+      console.error("Valores de latitude e longitude inválidos");
+      return;
+    }else{
+      
+      
+      
+      const response = await fetch("http://localhost:3001/bd/marcadores", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      //ele inicialemente manda para o banco os valores como um vetor json
       body: JSON.stringify({
-        nome,
+        endereco: address,
         descricao: desc,
         latitude: parseFloat(lat),
         longitude: parseFloat(long),
       }),
     });
 
-    // Se o backend criou com sucesso, o novo marcador entra no estado local.
+    // se o marcador foi criado ele devolve aquele vetor json la de traz para adicionar localmente
     const novo = await response.json();
     setMarkers([...markers, novo]);
 
     setLat("");
     setLong("");
-    setNome("");
+    setAddress("");
     setDesc("");
-  };
+ } 
+};
 
+  //pega o id do marcador aberto e manda esse id la pro backend para deletar o marcador certo
   const deletarMarcador = async (id) => {
-    const response = await fetch(`http://localhost:3001/marcadores/${id}`, {
+    const response = await fetch(`http://localhost:3001/bd/marcadores/${id}`, {
       method: "DELETE",
     });
 
-    // So remove da tela quando o backend confirmar que apagou no banco.
+    // verifique se o banco de dados permitiu o delete caso nao devolve o erro como um alert.
     if (!response.ok) {
       const mensagem = await response.text();
       alert(mensagem || "Nao foi possivel deletar o marcador");
       return;
     }
-
+    //apaga o marcador localemente
     setMarkers((estadoAnterior) =>
       estadoAnterior.filter((m) => Number(m.id) !== Number(id))
     );
@@ -86,7 +124,7 @@ function Mapa2() {
         {markers.map((m) => (
           <Marker key={m.id} position={[m.latitude, m.longitude]}>
             <Popup>
-              <strong>{m.nome}</strong>
+              <strong>{m.endereco}</strong>
               <br />
               {m.descricao}
               <br />
@@ -97,23 +135,18 @@ function Mapa2() {
       </MapContainer>
       Latitude
       <br />
-      <input value={lat} onChange={(e) => setLat(e.target.value)} />
+      <input value={lat} onChange={(e) => setLat(parseFloat(e.target.value))} />
       <br />
       Longitude
       <br />
-      <input value={long} onChange={(e) => setLong(e.target.value)} />
-      <br />
-      Nome
-      <br />
-      <input value={nome} onChange={(e) => setNome(e.target.value)} />
+      <input value={long} onChange={(e) => setLong(parseFloat(e.target.value))} />
       <br />
       Descrição
       <br />
       <input value={desc} onChange={(e) => setDesc(e.target.value)} />
       <br />
-      <input value={address} type="text" readOnly />
       <br />
-      <button onClick={() => {adicionarMarcador(), reverseGeocode(lat, long)}}>Adicionar</button>
+      <button onClick={adicionar}>Adicionar</button>
     </div>
   );
 }

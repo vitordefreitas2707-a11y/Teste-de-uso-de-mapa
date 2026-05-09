@@ -6,6 +6,7 @@ import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Mapa2 from "./mapa2"
 import Principal from './principal'
+import Mapa from './mapa'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -15,6 +16,7 @@ function App() {
         <BrowserRouter>
         <Routes>
           <Route path='/Mapa2' element={<Mapa2/>}/>
+          <Route path='/Mapa' element={<Mapa/>}/>
           <Route path='/' element={<Principal/>}/>
           <Route path='*' element={<h1>404 Página não encontrada</h1>}/>
         </Routes>
