@@ -1,6 +1,6 @@
+import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 
 function Mapa() {
   const [markers, setMarkers] = useState([]);
@@ -92,12 +92,18 @@ function Mapa() {
 
   const selecionarSugestao = (sugestao) => {
     // Preenche o campo de endereço com a sugestão escolhida.
-    setAddress(sugestao.description || "");
+    setAddress(sugestao.description);
     // Copia a latitude retornada pela API para o estado.
-    setLat(sugestao.latitude ?? "");
+    setLat(sugestao.latitude); 
+    alert(lat);
     // Copia a longitude retornada pela API para o estado.
-    setLong(sugestao.longitude ?? "");
+    setLong(sugestao.longitude);
     // Fecha a lista de sugestões depois da escolha.
+    if(!lat || !long || Number.isNaN(Number(lat)) || Number.isNaN(Number(long))){
+      alert("essa porra ta errada");
+    }else{
+      adicionarMarcador
+    }
     setSuggestions([]);
   };
 
@@ -144,6 +150,7 @@ function Mapa() {
     setDesc("");
     // Fecha qualquer sugestão restante.
     setSuggestions([]);
+    adicionarMarcador
   };
 
   return (
@@ -151,14 +158,14 @@ function Mapa() {
       <MapContainer center={[-23.55, -46.63]} zoom={10} style={{ height: "60vh", width: "100%" }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {markers.map((marcador) => (
-          <Marker key={marcador.id} position={[marcador.latitude, marcador.longitude]}>
+        {Array.isArray(markers) && markers.map((m) => (
+          <Marker key={m.id} position={[m.latitude, m.longitude]}>
             <Popup>
-              <strong>{marcador.endereco}</strong>
+              <strong>{m.endereco}</strong>
               <br />
-              {marcador.descricao}
+              {m.descricao}
               <br />
-              <button onClick={() => deletarMarcador(marcador.id)}>Deletar</button>
+              <button onClick={() => deletarMarcador(m.id)}>Deletar</button>
             </Popup>
           </Marker>
         ))}
