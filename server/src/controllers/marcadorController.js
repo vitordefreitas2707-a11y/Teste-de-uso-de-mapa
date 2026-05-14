@@ -20,7 +20,25 @@ export const listarMarcadores = async (req, res) => {
 export const criarMarcador = async (req, res) => {
   try {
     const { endereco, descricao, latitude, longitude } = req.body;
-    const novo = await createMarcador(endereco, descricao, latitude, longitude);
+
+    // Valida que os campos obrigatórios foram preenchidos
+    if (!endereco || !latitude || !longitude) {
+      return res.status(400).json({ 
+        error: "Endereço, latitude e longitude são obrigatórios" 
+      });
+    }
+
+    // Valida que latitude e longitude são números válidos
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ 
+        error: "Latitude e longitude devem ser números válidos" 
+      });
+    }
+
+    const novo = await createMarcador(endereco, descricao, lat, lng);
     res.json(novo);
   } catch (err) {
     res.status(500).json({ error: getErrorMessage(err) });

@@ -11,7 +11,7 @@ export const reverseGeocodeGetAddress = async (req, res) => {
     return res.status(400).json({ error: "Valores de latitude/longitude fora do intervalo" });
   }
 
-  const key = process.env.GOOGLE_MAPS_API_KEY;
+  const key = process.env.GOOGLE_API_KEY;
   if (!key) {
     return res.status(500).json({ error: "Chave de API do Google nao configurada no servidor" });
   }
@@ -47,7 +47,7 @@ export const reverseGeocodeGetAddress = async (req, res) => {
 
 export const MapsAutocompleteGetAddress = async (req, res) => {
   const endereco = req.query.endereco || req.query.address || req.query.input;
-  const key = process.env.GOOGLE_MAPS_API_KEY;
+  const key = process.env.GOOGLE_API_KEY;
 
   if (!endereco || typeof endereco !== "string") {
     return res.status(400).json({ error: "Parametro 'endereco' (ou 'input') é obrigatório e deve ser uma string" });

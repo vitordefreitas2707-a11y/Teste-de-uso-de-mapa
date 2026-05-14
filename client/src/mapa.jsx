@@ -1,5 +1,5 @@
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 function Mapa() {
@@ -12,6 +12,9 @@ function Mapa() {
   const [suggestions, setSuggestions] = useState([]);
   // Controla quando a busca de sugestões ainda está carregando.
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [temp, setTemp] = useState([]);
+  // Usa useRef para evitar requisição quando uma sugestão é selecionada (síncrono).
+  const skipNextFetchRef = useRef(false);
 
   useEffect(() => {
     // Carrega do banco os marcadores ja salvos quando a tela abre.
@@ -27,6 +30,12 @@ function Mapa() {
     // Remove espaços extras do texto digitado antes de consultar a API.
     const termo = address.trim();
 
+    // Se uma sugestão foi selecionada, pula a requisição.
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
+
     // Se o usuário digitou menos de 3 caracteres, não vale a pena buscar sugestões.
     if (termo.length < 3) {
       // Limpa as sugestões antigas para não mostrar resultado fora de contexto.
@@ -37,6 +46,9 @@ function Mapa() {
       return undefined;
     }
 
+    // Cria um AbortController para cancelar requisições anteriores se necessário.
+    const abortController = new AbortController();
+
     // Aguarda 350ms para evitar chamar a API a cada tecla digitada.
     const timeoutId = window.setTimeout(async () => {
       // Ativa o indicador de carregamento enquanto a requisição acontece.
@@ -45,7 +57,8 @@ function Mapa() {
       try {
         // Faz a requisição para o backend que conversa com o Google Places.
         const response = await fetch(
-          `http://localhost:3001/api/google/maps/autocomplete?input=${encodeURIComponent(termo)}`
+          `http://localhost:3001/api/google/maps/autocomplete?input=${encodeURIComponent(termo)}`,
+          { signal: abortController.signal }
         );
 
         // Se o backend respondeu com erro, limpa a lista e para aqui.
@@ -59,6 +72,10 @@ function Mapa() {
         // Salva no estado apenas o array de sugestões, ou vazio se vier algo inválido.
         setSuggestions(Array.isArray(data.predictions) ? data.predictions : []);
       } catch (err) {
+        // Ignora erros de abort (quando a requisição foi cancelada intencionalmente).
+        if (err.name === "AbortError") {
+          return;
+        }
         // Mostra no console qualquer falha de rede ou de API.
         console.error("Erro ao buscar autocomplete:", err);
         // Limpa as sugestões caso a requisição falhe.
@@ -69,8 +86,11 @@ function Mapa() {
       }
     }, 350);
 
-    // Limpa o timeout anterior quando o endereço muda de novo.
-    return () => window.clearTimeout(timeoutId);
+    // Cleanup: cancela a requisição e limpa o timeout quando o endereço muda de novo.
+    return () => {
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
   }, [address]);
 
   const deletarMarcador = async (id) => {
@@ -91,19 +111,11 @@ function Mapa() {
   };
 
   const selecionarSugestao = (sugestao) => {
-    // Preenche o campo de endereço com a sugestão escolhida.
+    // Marca para pular a próxima requisição à API.
+    skipNextFetchRef.current = true;
     setAddress(sugestao.description);
-    // Copia a latitude retornada pela API para o estado.
     setLat(sugestao.latitude); 
-    alert(lat);
-    // Copia a longitude retornada pela API para o estado.
     setLong(sugestao.longitude);
-    // Fecha a lista de sugestões depois da escolha.
-    if(!lat || !long || Number.isNaN(Number(lat)) || Number.isNaN(Number(long))){
-      alert("essa porra ta errada");
-    }else{
-      adicionarMarcador
-    }
     setSuggestions([]);
   };
 
@@ -118,6 +130,23 @@ function Mapa() {
     if (!lat || !long || Number.isNaN(Number(lat)) || Number.isNaN(Number(long))) {
       alert("Selecione uma sugestão válida para preencher latitude e longitude");
       return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:3001/bd/marcadores");
+      if (!res.ok) throw new Error('fetch-failed');
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('bad-data');
+      // servidor ok — prosseguir normalmente
+    } catch (err) {
+      alert("Banco de dados não encontrado, salvando localmente");
+      setMarkers(prev => [...prev, {
+        id: Date.now(),
+        endereco: address,
+        descricao: desc,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(long)
+      }]);
     }
 
     // Envia o novo marcador para o backend.
@@ -138,19 +167,15 @@ function Mapa() {
     // Lê o marcador criado que o backend devolveu.
     const novo = await response.json();
     // Atualiza a lista na tela sem precisar recarregar a página.
-    setMarkers((estadoAnterior) => [...estadoAnterior, novo]);
+    setMarkers((prev) => [...prev, novo]);
 
     // Limpa os campos depois de salvar.
     setLat("");
-    // Limpa os campos depois de salvar.
     setLong("");
-    // Limpa os campos depois de salvar.
     setAddress("");
-    // Limpa os campos depois de salvar.
     setDesc("");
-    // Fecha qualquer sugestão restante.
     setSuggestions([]);
-    adicionarMarcador
+    setLoadingSuggestions(false);
   };
 
   return (
@@ -171,11 +196,14 @@ function Mapa() {
         ))}
       </MapContainer>
 
-      <h1>Endereço</h1>
+      <p>Endereço</p>
       <input
         type="text"
         value={address}
+        id="endereco"
         onChange={(e) => {
+          // Reseta o flag para permitir novas requisições quando o usuário digita.
+          skipNextFetchRef.current = false;
           // Atualiza o endereço conforme o usuário digita.
           setAddress(e.target.value);
           // Limpa a latitude antiga porque o texto novo pode mudar a sugestão escolhida.
@@ -186,19 +214,15 @@ function Mapa() {
         placeholder="Digite o endereço"
       />
 
-      {/* Mostra uma mensagem enquanto a busca de sugestões está acontecendo. */}
       {loadingSuggestions ? <p>Buscando sugestões...</p> : null}
 
-      {/* Exibe a lista de sugestões quando houver resultados. */}
       {suggestions.length > 0 ? (
         <ul>
           {suggestions.map((sugestao) => (
             <li key={sugestao.place_id}>
-              {/* Ao clicar, preenche o endereço e as coordenadas dessa sugestão. */}
               <button type="button" onClick={() => selecionarSugestao(sugestao)}>
                 {sugestao.description}
               </button>
-              {/* Mostra as coordenadas quando vierem da API. */}
               <span>
                 {sugestao.latitude != null && sugestao.longitude != null
                   ? ` (${sugestao.latitude}, ${sugestao.longitude})`
@@ -208,16 +232,9 @@ function Mapa() {
           ))}
         </ul>
       ) : null}
-
-      <h1>Descrição</h1>
+      <br />
+      <p>descrição</p>
       <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} />
-
-      <h1>Latitude</h1>
-      <input type="text" value={lat} onChange={(e) => setLat(e.target.value)} />
-
-      <h1>Longitude</h1>
-      <input type="text" value={long} onChange={(e) => setLong(e.target.value)} />
-
       <br />
       <button onClick={adicionarMarcador}>Adicionar Marcador</button>
     </div>
